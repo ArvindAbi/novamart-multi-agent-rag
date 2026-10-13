@@ -53,7 +53,7 @@ POST /api/chat  ── Bearer ID token ──►  POST .../runtimes/<web runtime
 
 ## Screenshots
 
-`screenshots/web_*.png`: the sign-in page, the chat after sign-in, and a reply from the agents.
+`screenshots/web_*.png`: the signed-out and signed-in page, tier and order lookups, a return already in progress, a denied return, a follow-up question that relies on conversation memory, and a competitor question blocked by the guardrail.
 
 ## Removing it
 

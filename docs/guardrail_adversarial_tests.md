@@ -56,4 +56,4 @@ This matters because the guardrail runs on every model call, including the calls
 
 ## Screenshots
 
-Screenshots of the blocked replies, taken from the run above: `screenshots/guardrail_adversarial_*.png`.
+Screenshots of the run above: `screenshots/guardrail_adversarial_*.png`. The same guardrail blocking a competitor question in the web page: `screenshots/web_chat_guardrail.png`.

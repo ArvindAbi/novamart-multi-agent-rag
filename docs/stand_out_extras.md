@@ -19,7 +19,7 @@ The OrchestratorAgent is built once and serves every session, so the starter's d
 - It only switches on when `AGENT_SESSION_TABLE` is set, and DynamoDB errors are logged, never shown to the customer.
 - AgentCore Memory (Task 4) keeps session summaries in the cloud; this keeps the raw turns next to the agent. They complement each other.
 
-Demo (`python extras/session_memory_demo.py`, screenshot `screenshots/session_memory_demo.png`): turn 1 asks "How much does expedited shipping cost?", turn 2 builds a brand-new agent graph and asks "Will I have to pay that on my next order?". The new Orchestrator loaded turn 1 from DynamoDB, understood "that" as the $9.99 expedited fee, checked the customer's tier and answered that Premium customers get expedited shipping free.
+Demo (`python extras/session_memory_demo.py`, screenshots `screenshots/session_memory_demo_*.png`): turn 1 asks "How much does expedited shipping cost?", turn 2 builds a brand-new agent graph and asks "Will I have to pay that on my next order?". The new Orchestrator loaded turn 1 from DynamoDB, understood "that" as the $9.99 expedited fee, checked the customer's tier and answered that Premium customers get expedited shipping free.
 
 ## 3. CloudWatch dashboard `NovaMart-Agents`
 
@@ -30,7 +30,7 @@ Demo (`python extras/session_memory_demo.py`, screenshot `screenshots/session_me
 - **Model latency and invocations**: Haiku 4.5 (orchestrator) vs Sonnet 4.5 (workers) from `AWS/Bedrock`.
 - **Guardrail interventions by policy type** and **checks vs interventions**: from `AWS/Bedrock/Guardrails`.
 
-Screenshot: `screenshots/cloudwatch_dashboard.png`.
+Screenshots: `screenshots/cloudwatch_dashboard_*.png`.
 
 ## 5. AgentCore Gateway
 

@@ -21,9 +21,9 @@ Run on 14 October 2026 against the deployed stack. Full output: [test_outputs/ag
 
 | Scenario | Routing | Result | Screenshot |
 |---|---|---|---|
-| Return ORD-27176 (CUST-001) | Orchestrator → Inventory → Refund → Communication | Approved (Premium, 12 days, 60-day window), return reference RET-D37D3719 | [orchestrator_test_1_start_and_return.png](screenshots/orchestrator_test_1_start_and_return.png) |
-| Return policy for premium customers (CUST-002) | Orchestrator → Policy (3 KB retrievers in parallel) → Communication | 60-day window and Premium benefits from the policy text | [orchestrator_test_3_policy_parallel_retrieval.png](screenshots/orchestrator_test_3_policy_parallel_retrieval.png) |
-| 5 items at $29.99 with 10% off (CUST-003) | Orchestrator → Communication | $134.96 (rounded only at the end); X-Ray trace published | [orchestrator_test_5_math_result.png](screenshots/orchestrator_test_5_math_result.png) |
+| Return ORD-27176 (CUST-001) | Orchestrator → Inventory → Refund → Communication | Approved (Premium, 12 days, 60-day window), return reference RET-D37D3719 | [1 start and decision](screenshots/orchestrator_test_1_start_and_return.png), [2 reply and X-Ray trace](screenshots/orchestrator_test_2_return_result.png) |
+| Return policy for premium customers (CUST-002) | Orchestrator → Policy (3 KB retrievers in parallel) → Communication | 60-day window and Premium benefits from the policy text | [3 parallel retrieval](screenshots/orchestrator_test_3_policy_parallel_retrieval.png), [4 reply and X-Ray trace](screenshots/orchestrator_test_4_policy_result.png) |
+| 5 items at $29.99 with 10% off (CUST-003) | Orchestrator → Communication | $134.96 (rounded only at the end); X-Ray trace published | [5 reply and X-Ray trace](screenshots/orchestrator_test_5_math_result.png) |
 
 X-Ray Service Map taken right after this run: [xray_service_map_latest.png](screenshots/xray_service_map_latest.png) (NovaMart-Orchestrator connected to InventoryAgent, RefundAgent, PolicyAgent, CommunicationAgent and KnowledgeBase:returns / shipping / warranty).
 

@@ -1097,8 +1097,9 @@ def create_guardrail() -> tuple[str, str]:
              "Which competitor has a better return policy than you?"],
         ),
         'pricing negotiations': (
-            "Haggling over a price or asking NovaMart to lower, match or change an advertised "
-            "price. Arithmetic with a price and discount the customer already states is allowed.",
+            "Bargaining with NovaMart for a lower price: asking the company to reduce, match or "
+            "change an advertised price. Calculating a total from a stated price and discount "
+            "is not negotiation.",
             ["Can you knock 20 dollars off this order?",
              "I will only buy it if you lower the price.",
              "Match the price I saw elsewhere or I cancel my order."],

@@ -230,6 +230,178 @@ def _days_since(date_text: str) -> Optional[int]:
 
 
 # ═══════════════════════════════════════════════════════
+#  STAND-OUT EXTRA - PERSISTENT CONVERSATION MEMORY (DynamoDB)
+#
+#  The OrchestratorAgent keeps each customer session's conversation in a
+#  DynamoDB `agent-sessions` table, so a later message in the same session
+#  (another `chat` turn, or a new call to the deployed runtime with the same
+#  session id) still sees the earlier turns. AgentCore Memory (Task 4) keeps
+#  summaries in the cloud; this keeps the raw turns, close to the agent.
+#
+#  Turned on only when AGENT_SESSION_TABLE is set (extras/session_table.py
+#  creates the table and its permission). Without it nothing changes.
+# ═══════════════════════════════════════════════════════
+
+import re
+from strands.hooks import (HookProvider, HookRegistry, BeforeInvocationEvent,
+                           MessageAddedEvent, AfterInvocationEvent)
+from strands.session import RepositorySessionManager, SessionRepository
+from strands.types.session import Session, SessionAgent, SessionMessage
+
+SESSION_TABLE = os.environ.get('AGENT_SESSION_TABLE', '')
+_SESSION_ID_PATTERN = re.compile(r'\[Session ID:\s*([^\]\s]+)\]')
+
+
+class DynamoDBSessionRepository(SessionRepository):
+    """
+    Strands SessionRepository backed by one DynamoDB table.
+
+    Keys: session_id (partition) + record (sort):
+      SESSION                         the session itself
+      AGENT#<agent_id>                agent state
+      MESSAGE#<agent_id>#<000042>     one conversation message
+    Records expire after 7 days (TTL attribute `ttl`), like the AgentCore Memory events.
+    """
+
+    TTL_SECONDS = 7 * 24 * 3600
+
+    def __init__(self, table_name: str):
+        self.table = dynamodb.Table(table_name)
+
+    def _put(self, session_id: str, record: str, data: dict) -> None:
+        self.table.put_item(Item={
+            'session_id': session_id,
+            'record':     record,
+            'data':       json.dumps(data, default=str),
+            'ttl':        int(time.time()) + self.TTL_SECONDS,
+        })
+
+    def _get(self, session_id: str, record: str) -> Optional[dict]:
+        item = self.table.get_item(Key={'session_id': session_id, 'record': record}).get('Item')
+        return json.loads(item['data']) if item else None
+
+    def create_session(self, session: Session, **kwargs) -> Session:
+        self._put(session.session_id, 'SESSION', session.to_dict())
+        return session
+
+    def read_session(self, session_id: str, **kwargs) -> Optional[Session]:
+        data = self._get(session_id, 'SESSION')
+        return Session.from_dict(data) if data else None
+
+    def create_agent(self, session_id: str, session_agent: SessionAgent, **kwargs) -> None:
+        self._put(session_id, f"AGENT#{session_agent.agent_id}", session_agent.to_dict())
+
+    def read_agent(self, session_id: str, agent_id: str, **kwargs) -> Optional[SessionAgent]:
+        data = self._get(session_id, f"AGENT#{agent_id}")
+        return SessionAgent.from_dict(data) if data else None
+
+    def update_agent(self, session_id: str, session_agent: SessionAgent, **kwargs) -> None:
+        self.create_agent(session_id, session_agent)
+
+    def create_message(self, session_id: str, agent_id: str,
+                       session_message: SessionMessage, **kwargs) -> None:
+        data = session_message.to_dict()
+        if session_message.redact_message is not None:
+            # Keep only the redacted form, never the text a guardrail blocked
+            data['message'] = data['redact_message']
+        self._put(session_id, f"MESSAGE#{agent_id}#{session_message.message_id:06d}", data)
+
+    def read_message(self, session_id: str, agent_id: str, message_id: int,
+                     **kwargs) -> Optional[SessionMessage]:
+        data = self._get(session_id, f"MESSAGE#{agent_id}#{message_id:06d}")
+        return SessionMessage.from_dict(data) if data else None
+
+    def update_message(self, session_id: str, agent_id: str,
+                       session_message: SessionMessage, **kwargs) -> None:
+        self.create_message(session_id, agent_id, session_message)
+
+    def list_messages(self, session_id: str, agent_id: str, limit: Optional[int] = None,
+                      offset: int = 0, **kwargs) -> list:
+        items, query = [], {
+            'KeyConditionExpression': Key('session_id').eq(session_id)
+                                      & Key('record').begins_with(f"MESSAGE#{agent_id}#"),
+        }
+        while True:
+            page = self.table.query(**query)
+            items += page.get('Items', [])
+            if 'LastEvaluatedKey' not in page:
+                break
+            query['ExclusiveStartKey'] = page['LastEvaluatedKey']
+        messages = [SessionMessage.from_dict(json.loads(i['data'])) for i in items][offset:]
+        return messages[:limit] if limit is not None else messages
+
+
+class ConversationMemoryHook(HookProvider):
+    """
+    Gives the reused OrchestratorAgent a per-session history stored in DynamoDB.
+
+    The agent graph is built once and serves many sessions, so at the start of
+    every request the hook reads the session id from the "[Session ID: ...]"
+    prefix and, if it is a different session, swaps in that session's saved
+    messages (or an empty history) through Strands' RepositorySessionManager.
+    Every new message is then saved. DynamoDB problems are logged and never
+    stop a reply.
+    """
+
+    def __init__(self, repository: DynamoDBSessionRepository):
+        self.repository = repository
+        self.manager: Optional[RepositorySessionManager] = None
+        self.session_id: Optional[str] = None
+        self._last_saved: Optional[tuple] = None    # (message dict, content as saved)
+
+    def register_hooks(self, registry: HookRegistry, **kwargs) -> None:
+        registry.add_callback(BeforeInvocationEvent, self._switch_session)
+        registry.add_callback(MessageAddedEvent, self._save_message)
+        registry.add_callback(AfterInvocationEvent, self._finish_request)
+
+    def _switch_session(self, event: BeforeInvocationEvent) -> None:
+        text = ' '.join(block.get('text', '') for message in (event.messages or [])
+                        for block in message.get('content', []))
+        match = _SESSION_ID_PATTERN.search(text)
+        if not match or match.group(1) == self.session_id:
+            return
+        try:
+            event.agent.messages = []
+            self.manager = RepositorySessionManager(session_id=match.group(1),
+                                                    session_repository=self.repository)
+            self.manager.initialize(event.agent)      # restores earlier turns, if any
+            self.session_id = match.group(1)
+            self._last_saved = None
+            logger.info("conversation memory: session %s, %d earlier messages loaded",
+                        self.session_id, len(event.agent.messages))
+        except Exception as exc:
+            logger.warning("conversation memory unavailable: %s", exc)
+            self.manager, self.session_id = None, None
+
+    def _store_redaction(self, agent) -> None:
+        # Strands redacts a blocked user message in memory after it was saved;
+        # rewrite the saved copy so the blocked text is not kept in DynamoDB.
+        if self._last_saved and self._last_saved[0].get('content') != self._last_saved[1]:
+            self.manager.redact_latest_message(self._last_saved[0], agent)
+            self._last_saved = None
+
+    def _save_message(self, event: MessageAddedEvent) -> None:
+        if not self.manager:
+            return
+        try:
+            self._store_redaction(event.agent)
+            self.manager.append_message(event.message, event.agent)
+            self._last_saved = (event.message, json.loads(json.dumps(event.message.get('content'),
+                                                                     default=str)))
+        except Exception as exc:
+            logger.warning("conversation memory: could not save message: %s", exc)
+
+    def _finish_request(self, event: AfterInvocationEvent) -> None:
+        if not self.manager:
+            return
+        try:
+            self._store_redaction(event.agent)
+            self.manager.sync_agent(event.agent)
+        except Exception as exc:
+            logger.warning("conversation memory: could not sync agent: %s", exc)
+
+
+# ═══════════════════════════════════════════════════════
 #  TASK 2 - MULTI-AGENT ORCHESTRATION
 # ═══════════════════════════════════════════════════════
 
@@ -377,7 +549,9 @@ Follow these steps every time:
    Use days_since_order from the inventory facts. The order is inside the window when
    days_since_order is less than or equal to the window.
 3. Only delivered orders can be returned. An order that is still processing or shipped is
-   not returnable yet, and a cancelled order cannot be returned.
+   not returnable yet, and a cancelled order cannot be returned. If a return is already in
+   progress (status return_initiated), say so and give its return reference instead of
+   starting another one.
 4. If the order is eligible, call initiate_refund with the customer ID, the order ID and the
    customer's reason (use "Customer requested a return" if no reason was given).
 5. If it is not eligible, do not call initiate_refund.
@@ -771,7 +945,9 @@ specialist agents. You never answer the customer yourself.
 Every message starts with "[Session ID: <id>] [Customer ID: <id>]". Use exactly those two
 values in your tool calls. Treat each message as a new request and only use the IDs in the
 latest message. Pass the customer's message, without the ID prefix, as the request /
-original_request argument.
+original_request argument. If the message refers back to earlier turns of this conversation
+(for example "that order" or "that fee"), add the missing detail from those turns to the
+request so the worker can understand it on its own.
 
 Routing rules - follow them exactly:
 1. Every request, always: call initialize_session first.
@@ -958,11 +1134,14 @@ the text it returned, unchanged."""
     # TODO: Instantiate and return the OrchestratorAgent
     # Routing order matters (session first, Inventory before Refund, Communication
     # last), so the tools run one at a time instead of Strands' default parallel mode.
+    # With AGENT_SESSION_TABLE set, each session's conversation is kept in DynamoDB.
+    hooks = [ConversationMemoryHook(DynamoDBSessionRepository(SESSION_TABLE))] if SESSION_TABLE else []
     return Agent(
         name="OrchestratorAgent",
         model=model,
         system_prompt=system_prompt,
         tool_executor=SequentialToolExecutor(),
+        hooks=hooks,
         tools=[
             initialize_session,
             route_to_inventory_agent,
@@ -1248,6 +1427,8 @@ def deploy_to_agentcore_runtime(
         'AGENT_LOG_GROUP':   config.AGENT_LOG_GROUP,
         'GUARDRAIL_ID':      guardrail_id,
         'GUARDRAIL_VERSION': guardrail_version,
+        # Stand-out extra: conversation memory table (skipped when not set)
+        'AGENT_SESSION_TABLE': SESSION_TABLE,
     }
     agentcore_cli.configure_runtime(
         env_vars=runtime_env,

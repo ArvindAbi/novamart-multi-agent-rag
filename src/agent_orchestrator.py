@@ -56,6 +56,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # Strands Agents SDK - see: https://github.com/strands-agents/sdk-python
 from strands import Agent
 from strands.models import BedrockModel
+from strands.tools.executors import SequentialToolExecutor
 from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 
@@ -701,11 +702,15 @@ Writing the reply:
   findings: the order and product, the decision and its reason, the return reference and
   next steps, and the policy terms that apply.
 - Use only facts from the findings. Never invent order details, references, dates or policy terms.
+- Never assume the customer's tier or account details. Mention them only when the
+  inventory findings state them; otherwise describe the policy in general terms.
 - Keep a warm, empathetic and professional tone. Address the customer by first name when it
   is known. Be concise.
 - If no other agent ran and the customer asked for a calculation, work it out yourself step
   by step. Keep full precision until the end and round money to cents only once, on the
   final amount. Show the working briefly.
+- Your reply is sent to the customer exactly as you write it. Start directly with the
+  greeting: no notes about your process, the workflow context or what you are about to do.
 - Write plain text addressed to the customer. Do not mention agents, tools, sessions or
   internal systems.
 - End with a short offer of further help."""
@@ -784,6 +789,8 @@ Routing rules - follow them exactly:
 
 If a message matches more than one rule, call every matching worker in the order above and
 still finish with route_to_communication_agent.
+
+Call one tool at a time and wait for its result before calling the next one.
 
 CRITICAL: You are never permitted to write the final customer-facing response yourself.
 route_to_communication_agent must always be your very last tool call - no exceptions, even
@@ -949,10 +956,13 @@ the text it returned, unchanged."""
                     f"{state.get('version')}); continuing with it.")
 
     # TODO: Instantiate and return the OrchestratorAgent
+    # Routing order matters (session first, Inventory before Refund, Communication
+    # last), so the tools run one at a time instead of Strands' default parallel mode.
     return Agent(
         name="OrchestratorAgent",
         model=model,
         system_prompt=system_prompt,
+        tool_executor=SequentialToolExecutor(),
         tools=[
             initialize_session,
             route_to_inventory_agent,

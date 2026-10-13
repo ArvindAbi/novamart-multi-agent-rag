@@ -48,7 +48,7 @@
         },
         {
           "name": "GUARDRAIL_ID",
-          "value": "yk18tytr04k6"
+          "value": "magc8wpzgo9e"
         },
         {
           "name": "GUARDRAIL_VERSION",
@@ -69,6 +69,10 @@
         {
           "name": "AGENT_TRACE_SAMPLING_RATE",
           "value": "1.0"
+        },
+        {
+          "name": "AGENT_SESSION_TABLE",
+          "value": "udacity-agentcore-agent-sessions"
         }
       ]
     }

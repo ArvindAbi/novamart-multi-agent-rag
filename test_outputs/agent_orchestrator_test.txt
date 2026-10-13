@@ -1,0 +1,262 @@
+Run on 2026-10-14 against the deployed stack (guardrail magc8wpzgo9e v1, KBs CDNCSTNCIX / I8RL0EB5DP / YW64YVOI4R).
+Copied from the terminal. The long retrieved KB passages and the second, streamed copy of each
+agent reply are shortened; everything else is as printed. Screenshots: screenshots/orchestrator_test_*.png
+
+$ python src/agent_orchestrator.py test
+Running local agent test...
+
+────────────────────────────────────────────────────────────
+Session: bd3cf9dd | Customer: CUST-001
+Query: I want to return my wireless headphones from order ORD-27176
+I'll help you with your return request. Let me start by initializing this session and then gathering the details about your order.
+Tool #1: initialize_session
+Now let me retrieve the details about your order:
+Tool #2: route_to_inventory_agent
+
+  ────────────────────────────────────────────────────────────────────
+  [ STEP 01 ]  INVENTORY AGENT
+             Role  : Fetch order details and customer tier from DynamoDB
+             Model : us.anthropic.claude-sonnet-4-5-20250929-v1:0
+  ────────────────────────────────────────────────────────────────────
+    [AGENT REASONING - INVENTORY AGENT]
+
+Tool #1: check_order_status
+
+Tool #2: get_customer_tier
+**Order Facts:**
+
+- **Order ID:** ORD-27176
+- **Product:** Wireless Headphones Pro
+- **Category:** Electronics
+- **Status:** Delivered
+- **Order Date:** 2026-10-02
+- **Days Since Order:** 12 days
+- **Price:** $149.99
+- **Quantity:** 1
+
+**Customer Information:**
+
+- **Name:** Alice Johnson
+- **Tier:** Premium
+
+The order has been delivered and is 12 days old. I've gathered the facts for your return request. Another agent will review this information and assist you with the return process.             Status : [COMPLETE]  Elapsed: 9.7s  (LLM may still stream final text below)
+             State  : DynamoDB[inventory_agent]  version 0 -> 1
+Now let me route this to the Refund Agent to process your return:
+Tool #3: route_to_refund_agent
+
+  ────────────────────────────────────────────────────────────────────
+  [ STEP 02 ]  REFUND AGENT
+             Role  : Evaluate return eligibility using inventory and policy data
+             Model : us.anthropic.claude-sonnet-4-5-20250929-v1:0
+  ────────────────────────────────────────────────────────────────────
+    [AGENT REASONING - REFUND AGENT]
+I'll help you with your return request. Let me first check the order details and your account information.
+Tool #1: get_inventory_context
+Perfect! I have all the information needed. Now let me process your return request.
+Tool #2: initiate_refund
+**RETURN REQUEST APPROVED**
+
+**Decision Summary:**
+- **Order ID:** ORD-27176
+- **Customer Tier:** Premium
+- **Return Window:** 60 days
+- **Days Since Order:** 12 days
+- **Status:** APPROVED
+
+**Return Reference:** RET-D37D3719
+
+**Next Steps:**
+1. A prepaid return label is available in your Order History
+2. Pack the Wireless Headphones Pro securely in its original packaging
+3. Drop it off at any authorized carrier location
+4. Your refund of $149.99 will be processed within 5-7 business days after we receive the return
+
+Your return is well within the 60-day Premium customer return window. Is there anything else you need help with?             Status : [COMPLETE]  Elapsed: 14.1s  (LLM may still stream final text below)
+             State  : DynamoDB[refund_agent]  version 1 -> 2
+Finally, let me compose the final response for you:
+Tool #4: route_to_communication_agent
+
+  ────────────────────────────────────────────────────────────────────
+  [ STEP 03 ]  COMMUNICATION AGENT
+             Role  : Compose the final customer-facing response
+             Model : us.anthropic.claude-sonnet-4-5-20250929-v1:0
+  ────────────────────────────────────────────────────────────────────
+    [AGENT REASONING - COMMUNICATION AGENT]
+
+Tool #1: get_full_workflow_context
+Hi Alice,
+
+I'd be happy to help you return your Wireless Headphones Pro from order ORD-27176.
+
+**Good news – your return is approved!**
+
+Your return reference is **RET-D37D3719**.
+
+Since you're a Premium customer, you have a 60-day return window, and your order was placed just 12 days ago on October 2nd, so you're well within the timeframe.
+
+**Here's what to do next:**
+
+1. You'll find a prepaid return label in your Order History
+2. Pack the Wireless Headphones Pro securely in its original packaging
+3. Drop it off at any authorized carrier location
+4. Once we receive the return, your refund of $149.99 will be processed within 5-7 business days
+
+Is there anything else I can help you with today?             Status : [COMPLETE]  Elapsed: 10.5s  (LLM may still stream final text below)
+             State  : DynamoDB[communication_agent]  version 2 -> 3
+(the orchestrator then relays the CommunicationAgent's reply unchanged)
+Response: Hi Alice,
+
+I'd be happy to help you return your Wireless Headphones Pro from order ORD-27176.
+
+**Good news – your return is approved!**
+
+Your return reference is **RET-D37D3719**.
+
+Since you're a Premium customer, you have a 60-day return window, and your order was placed just 12 days ago on October 2nd, so you're well within the timeframe.
+
+**Here's what to do next:**
+
+1. You'll find a prepaid return label in your Order History
+2. Pack the Wireless Headphones Pro securely in its original packaging
+3. Drop it off at any authorized carrier location
+4. Once we receive the return, your refund of $149.99 will be processed within 5-7 business days
+
+Is there anything else I can help you with today?
+
+
+  X-Ray trace 1-6ace9396-23d68b5da07c4213baee76dd published successfully.
+  Allow 30-60 seconds, then open the Service Map and select 'Last 5 minutes':
+  https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#xray:service-map/map
+  Submission step: take a screenshot showing the full NovaMart-Orchestrator → worker-agent call chain.
+
+────────────────────────────────────────────────────────────
+Session: 20f5a644 | Customer: CUST-002
+Query: What is the return policy for premium customers?
+I'll help you with that question about the return policy for premium customers. Let me start by initializing the session and then routing your question to our Policy Agent.
+Tool #5: initialize_session
+Now let me route your policy question to the Policy Agent:
+Tool #6: route_to_policy_agent
+
+  ────────────────────────────────────────────────────────────────────
+  [ STEP 04 ]  POLICY AGENT
+             Role  : Multi-Agent RAG -- parallel KB retrieval + synthesis
+             Model : us.anthropic.claude-sonnet-4-5-20250929-v1:0
+  ────────────────────────────────────────────────────────────────────
+    [AGENT REASONING - POLICY AGENT]
+
+Tool #1: search_all_policies
+    [PARALLEL RETRIEVAL - START]  Spawning 3 sub-agents concurrently via ThreadPoolExecutor
+    ──────────────────────────────────────────────────────
+    +-- [SUB-AGENT 01]  ReturnsRetriever   KB-ID: CDNCSTNCIX
+    +-- [SUB-AGENT 02]  ShippingRetriever  KB-ID: I8RL0EB5DP
+    +-- [SUB-AGENT 03]  WarrantyRetriever  KB-ID: YW64YVOI4R
+    Retrieving in parallel... (sub-agent output suppressed - clean results printed sequentially after [END])
+    ──────────────────────────────────────────────────────
+    [PARALLEL RETRIEVAL - END]  All 3 KBs responded  Elapsed: 10.3s
+
+    [SUB-AGENT 01]  ReturnsRetriever   KB: CDNCSTNCIX
+      | Here are the relevant passages from the NovaMart Returns Policy regarding premium customers:
+      | **Passage 1** (Source: customer_tiers.txt): (Customer Tier Program text: Premium tier, 60-day return window, ...)
+      | **Passage 2** (Source: return_policy.txt):
+      | "STANDARD RETURN WINDOW Customers may return most items within 30 days of delivery for a full refund. Premium tier customers receive an extended 60-day return window."
+
+    [SUB-AGENT 02]  ShippingRetriever  KB: I8RL0EB5DP
+      | Based on the Shipping policy knowledge base, here are the relevant passages about return policy for premium customers:
+      | **Passage 1 (Relevance Score: 0.700):** (Customer Tier Program text)
+      | **Source:** s3://udacity-agentcore-policy-docs-064040034215-756655e0/policies/shipping/customer_tiers.txt
+      | **Passage 2 (Relevance Score: 0.605):**
+      | "PREMIUM MEMBER BENEFITS Premium tier customers receive free expedited shipping on all orders."
+      | **Source:** s3://udacity-agentcore-policy-docs-064040034215-756655e0/policies/shipping/shipping_policy.txt
+
+    [SUB-AGENT 03]  WarrantyRetriever  KB: YW64YVOI4R
+      | Based on the Warranty policy knowledge base, here are the relevant passages regarding the return policy for premium customers:
+      | **Passage 1 (Relevance Score: 0.700):** (Customer Tier Program text)
+      | **Source:** s3://udacity-agentcore-policy-docs-064040034215-756655e0/policies/warranty/customer_tiers.txt
+      | **Passage 2 (Relevance Score: 0.630):** (Warranty Policy text, ending "PREMIUM CUSTOMER WARRANTY Premium tier customers receive an automatic 3-year warranty on all Electronics.")
+      | **Source:** s3://udacity-agentcore-policy-docs-064040034215-756655e0/policies/warranty/warranty_policy.txt
+Based on NovaMart's policies, here is the return policy for Premium customers:
+(PolicyAgent synthesis: 60-day return window, how to qualify for Premium, additional Premium benefits)
+             Status : [COMPLETE]  Elapsed: 21.7s  (LLM may still stream final text below)
+             State  : DynamoDB[policy_agent]  version 0 -> 1
+Now let me compose the final response for you:
+Tool #7: route_to_communication_agent
+
+  ────────────────────────────────────────────────────────────────────
+  [ STEP 05 ]  COMMUNICATION AGENT
+             Role  : Compose the final customer-facing response
+             Model : us.anthropic.claude-sonnet-4-5-20250929-v1:0
+  ────────────────────────────────────────────────────────────────────
+    [AGENT REASONING - COMMUNICATION AGENT]
+
+Tool #2: get_full_workflow_context
+             Status : [COMPLETE]  Elapsed: 11.2s  (LLM may still stream final text below)
+             State  : DynamoDB[communication_agent]  version 1 -> 2
+Response: Hello!
+
+Thank you for asking about our Premium customer return policy.
+
+**Premium customers enjoy an extended 60-day return window** to return most items for a full refund, double the standard 30-day window.
+
+**How to Qualify for Premium Tier:**
+You'll automatically become a Premium customer when you meet either of these thresholds in a calendar year:
+- Spend $500 or more, OR
+- Place 20 or more orders
+
+You'll receive an email notification when you're upgraded.
+
+**Additional Premium Benefits:**
+Along with the extended return window, Premium members also receive:
+- Free expedited shipping on all orders
+- 3-year warranty on electronics (instead of the standard 1-year)
+- Priority customer support with response within 4 hours
+- Early access to sales and new product launches
+- Dedicated account manager for orders over $500
+
+If you'd like to check whether your account currently has Premium status or have any other questions, I'm happy to help!
+
+
+  X-Ray trace 1-6ace93d0-25fbfea798b01237cb40fcb7 published successfully.
+  Allow 30-60 seconds, then open the Service Map and select 'Last 5 minutes':
+  https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#xray:service-map/map
+  Submission step: take a screenshot showing the full NovaMart-Orchestrator → worker-agent call chain.
+
+────────────────────────────────────────────────────────────
+Session: f2f029ba | Customer: CUST-003
+Query: How much would 5 items at $29.99 be with a 10% discount?
+I'll help you with that calculation. Let me route this to the Communication Agent.
+Tool #8: initialize_session
+Now let me route this calculation to the Communication Agent:
+Tool #9: route_to_communication_agent
+
+  ────────────────────────────────────────────────────────────────────
+  [ STEP 06 ]  COMMUNICATION AGENT
+             Role  : Compose the final customer-facing response
+             Model : us.anthropic.claude-sonnet-4-5-20250929-v1:0
+  ────────────────────────────────────────────────────────────────────
+    [AGENT REASONING - COMMUNICATION AGENT]
+
+Tool #3: get_full_workflow_context
+             Status : [COMPLETE]  Elapsed: 8.0s  (LLM may still stream final text below)
+             State  : DynamoDB[communication_agent]  version 0 -> 1
+Response: Hello!
+
+Let me calculate that for you:
+
+**Step 1:** 5 items at $29.99 each
+5 × $29.99 = $149.95
+
+**Step 2:** Apply 10% discount
+10% of $149.95 = $14.995
+$149.95 - $14.995 = $134.955
+
+**Final total:** $134.96
+
+So 5 items at $29.99 each with a 10% discount would come to **$134.96**.
+
+Is there anything else I can help you with today?
+
+
+  X-Ray trace 1-6ace9400-b8cc55fa777857fd5c311077 published successfully.
+  Allow 30-60 seconds, then open the Service Map and select 'Last 5 minutes':
+  https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#xray:service-map/map
+  Submission step: take a screenshot showing the full NovaMart-Orchestrator → worker-agent call chain.

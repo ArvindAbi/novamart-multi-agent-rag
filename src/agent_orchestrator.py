@@ -1142,6 +1142,9 @@ def create_guardrail() -> tuple[str, str]:
             {'type': 'HATE',       'inputStrength': 'HIGH',   'outputStrength': 'HIGH'},
             {'type': 'INSULTS',    'inputStrength': 'MEDIUM', 'outputStrength': 'MEDIUM'},
             {'type': 'MISCONDUCT', 'inputStrength': 'MEDIUM', 'outputStrength': 'MEDIUM'},
+            # Added beyond the required filters: catches prompt injection and jailbreak
+            # attempts on input (this filter only supports NONE on output)
+            {'type': 'PROMPT_ATTACK', 'inputStrength': 'HIGH', 'outputStrength': 'NONE'},
         ]},
         sensitiveInformationPolicyConfig={'piiEntitiesConfig': [
             {'type': 'CREDIT_DEBIT_CARD_NUMBER',  'action': 'BLOCK'},

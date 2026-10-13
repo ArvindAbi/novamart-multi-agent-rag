@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NovaMart Support</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="bar">
+    <div class="brand">NovaMart <span>Support</span></div>
+    <div class="account">
+      <span id="who"></span>
+      <button id="sign-in" class="primary">Sign in</button>
+      <button id="sign-out" class="ghost" hidden>Sign out</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="signed-out" class="card intro">
+      <h1>How can we help?</h1>
+      <p>Sign in with your NovaMart account to ask about your orders, returns, shipping or warranty.</p>
+    </section>
+
+    <section id="chat" class="card" hidden>
+      <div id="messages" aria-live="polite"></div>
+      <form id="composer" autocomplete="off">
+        <input id="input" placeholder="Ask about an order, a return, shipping or warranty" required>
+        <button class="primary" type="submit">Send</button>
+      </form>
+      <p class="hint">Try: "I want to return my order ORD-27176" or "What is the return policy for premium customers?"</p>
+    </section>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

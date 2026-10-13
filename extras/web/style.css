@@ -1,0 +1,111 @@
+:root {
+  --bg: #f5f6f8;
+  --card: #ffffff;
+  --text: #1c2430;
+  --muted: #6b7380;
+  --line: #e2e5ea;
+  --accent: #2f5bd3;
+  --accent-text: #ffffff;
+  --mine: #e8eefc;
+  --theirs: #f1f2f4;
+  --error: #b42318;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12151a;
+    --card: #1b2028;
+    --text: #e6e9ee;
+    --muted: #9aa3af;
+    --line: #2b313b;
+    --accent: #6d8ff0;
+    --accent-text: #0e1116;
+    --mine: #24304a;
+    --theirs: #232831;
+    --error: #f97066;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+}
+
+.brand { font-weight: 700; font-size: 17px; }
+.brand span { font-weight: 400; color: var(--muted); }
+.account { display: flex; gap: 12px; align-items: center; color: var(--muted); font-size: 14px; }
+
+main { max-width: 760px; margin: 24px auto; padding: 0 16px; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.intro h1 { margin: 0 0 8px; font-size: 22px; }
+.intro p { margin: 0; color: var(--muted); }
+
+#messages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 320px;
+  max-height: 60vh;
+  overflow-y: auto;
+  margin-bottom: 16px;
+}
+
+.msg {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.msg.mine { align-self: flex-end; background: var(--mine); }
+.msg.theirs { align-self: flex-start; background: var(--theirs); }
+.msg.pending { color: var(--muted); font-style: italic; }
+.msg.error { color: var(--error); }
+
+#composer { display: flex; gap: 8px; }
+#composer input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+button {
+  border-radius: 8px;
+  padding: 9px 16px;
+  font: inherit;
+  cursor: pointer;
+}
+button.primary { background: var(--accent); color: var(--accent-text); border: none; }
+button.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+button:disabled { opacity: 0.6; cursor: default; }
+
+.hint { margin: 12px 0 0; color: var(--muted); font-size: 13px; }
+
+@media (max-width: 520px) {
+  .bar { padding: 10px 16px; }
+  .msg { max-width: 100%; }
+}
